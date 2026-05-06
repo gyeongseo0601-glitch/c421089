@@ -623,8 +623,8 @@ with tab1:
             line=dict(color='#fff', width=2, dash='dot'),
             marker=dict(size=6, color='#fff')
         ))
-        fig.update_layout(**CHART_LAYOUT, barmode='overlay', height=320,
-                          yaxis_title='수량 (개)')
+        fig.update_layout(**CHART_LAYOUT, barmode='overlay', height=320)
+        fig.update_layout(yaxis_title='수량 (개)')
         st.plotly_chart(fig, use_container_width=True)
 
     with c2:
@@ -641,8 +641,8 @@ with tab1:
             marker_colors=[COLORS['green'], COLORS['orange'], COLORS['cyan']],
             textfont=dict(color='#fff', size=11),
         ))
-        fig2.update_layout(**CHART_LAYOUT, height=320, showlegend=True,
-                           legend=dict(orientation='h', y=-0.1))
+        fig2.update_layout(**CHART_LAYOUT, height=320, showlegend=True)
+        fig2.update_layout(legend=dict(orientation='h', y=-0.1))
         st.plotly_chart(fig2, use_container_width=True)
 
     # 초과근무
@@ -657,7 +657,8 @@ with tab1:
         x=mo, y=max_ot_list, name='초과근무 한도',
         mode='lines', line=dict(color=COLORS['red'], width=2, dash='dash')
     ))
-    fig3.update_layout(**CHART_LAYOUT, height=240, yaxis_title='시간 (Hr/월)')
+    fig3.update_layout(**CHART_LAYOUT, height=240)
+    fig3.update_layout(yaxis_title='시간 (Hr/월)')
     st.plotly_chart(fig3, use_container_width=True)
 
 
@@ -701,7 +702,8 @@ with tab2:
             marker_color=colors_bar, opacity=0.85, name='순변동'
         ))
         fig2.add_hline(y=0, line_color='#525252', line_width=1)
-        fig2.update_layout(**CHART_LAYOUT, height=320, yaxis_title='순 인력 변동 (명)')
+        fig2.update_layout(**CHART_LAYOUT, height=320)
+        fig2.update_layout(yaxis_title='순 인력 변동 (명)')
         st.plotly_chart(fig2, use_container_width=True)
 
     # 인력 용량 가동률
@@ -721,7 +723,8 @@ with tab2:
     ))
     fig3.add_hline(y=100, line_color=COLORS['yellow'],
                    line_dash='dash', annotation_text='정규시간 100%')
-    fig3.update_layout(**CHART_LAYOUT, height=240, yaxis_title='가동률 (%)')
+    fig3.update_layout(**CHART_LAYOUT, height=240)
+    fig3.update_layout(yaxis_title='가동률 (%)')
     st.plotly_chart(fig3, use_container_width=True)
 
 
@@ -751,7 +754,8 @@ with tab3:
         fig.add_hline(y=params['final_inv'], line_color=COLORS['yellow'],
                       line_dash='dot',
                       annotation_text=f"최종목표 {params['final_inv']}개")
-        fig.update_layout(**CHART_LAYOUT, height=340, yaxis_title='수량 (개)')
+        fig.update_layout(**CHART_LAYOUT, height=340)
+        fig.update_layout(yaxis_title='수량 (개)')
         st.plotly_chart(fig, use_container_width=True)
 
     with c2:
@@ -770,7 +774,8 @@ with tab3:
             x=mo, y=[I[t] for t in T_range],
             marker_color=inv_colors, opacity=0.85, name='월말재고'
         ))
-        fig2.update_layout(**CHART_LAYOUT, height=340, yaxis_title='재고 (개)')
+        fig2.update_layout(**CHART_LAYOUT, height=340)
+        fig2.update_layout(yaxis_title='재고 (개)')
         st.plotly_chart(fig2, use_container_width=True)
 
     # 재고 상태 요약
@@ -837,8 +842,8 @@ with tab4:
                 x=mo, y=series, name=lbl,
                 marker_color=col, opacity=0.85
             ))
-        fig2.update_layout(**CHART_LAYOUT, barmode='stack', height=340,
-                           yaxis_title='비용 (천원)')
+        fig2.update_layout(**CHART_LAYOUT, barmode='stack', height=340)
+        fig2.update_layout(yaxis_title='비용 (천원)')
         st.plotly_chart(fig2, use_container_width=True)
 
     # 비용 비율 표
