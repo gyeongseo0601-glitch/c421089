@@ -345,17 +345,26 @@ def solve_app(params, demand, model_type="LP"):
         if status != 'optimal':
             return None, status
 
-        # 결과 추출
+        # 결과 추출 (t=0은 초기조건으로 고정, H/L/P/C/O는 t=1부터 유효)
+        def safe_val(var, t):
+            try:
+                v = value(var[t])
+                return v if v is not None else 0.0
+            except Exception:
+                return 0.0
+
         res = {
             'cost': value(m.Cost),
-            'W': [value(m.W[t]) for t in TIME],
-            'H': [value(m.H[t]) for t in TIME],
-            'L': [value(m.L[t]) for t in TIME],
-            'P': [value(m.P[t]) for t in TIME],
-            'I': [value(m.I[t]) for t in TIME],
-            'S': [value(m.S[t]) for t in TIME],
-            'C': [value(m.C[t]) for t in TIME],
-            'O': [value(m.O[t]) for t in TIME],
+            # W, I, S: t=0(초기값) 포함
+            'W': [safe_val(m.W, t) for t in TIME],
+            'I': [safe_val(m.I, t) for t in TIME],
+            'S': [safe_val(m.S, t) for t in TIME],
+            # H, L, P, C, O: t=0은 의미없으므로 None으로 채움
+            'H': [None] + [safe_val(m.H, t) for t in T],
+            'L': [None] + [safe_val(m.L, t) for t in T],
+            'P': [None] + [safe_val(m.P, t) for t in T],
+            'C': [None] + [safe_val(m.C, t) for t in T],
+            'O': [None] + [safe_val(m.O, t) for t in T],
         }
         return res, 'optimal'
 
@@ -525,22 +534,25 @@ S = result['S']
 C = result['C']
 O = result['O']
 
+# None 안전 처리 헬퍼
+def n(v): return v if v is not None else 0.0
+
 # 비용 분해
 reg_wage_val = params['reg_wage'] * params['work_hours'] * params['work_days']
-cost_reg  = [reg_wage_val * W[t] for t in T_range]
-cost_ot   = [params['ot_wage'] * O[t] for t in T_range]
-cost_hire = [params['hire_cost'] * H[t] for t in T_range]
-cost_fire = [params['fire_cost'] * L[t] for t in T_range]
-cost_inv  = [params['inv_cost'] * I[t] for t in T_range]
-cost_back = [params['backlog_cost'] * S[t] for t in T_range]
-cost_mat  = [params['mat_cost'] * P[t] for t in T_range]
-cost_sub  = [params['sub_cost'] * C[t] for t in T_range]
+cost_reg  = [reg_wage_val           * n(W[t]) for t in T_range]
+cost_ot   = [params['ot_wage']      * n(O[t]) for t in T_range]
+cost_hire = [params['hire_cost']    * n(H[t]) for t in T_range]
+cost_fire = [params['fire_cost']    * n(L[t]) for t in T_range]
+cost_inv  = [params['inv_cost']     * n(I[t]) for t in T_range]
+cost_back = [params['backlog_cost'] * n(S[t]) for t in T_range]
+cost_mat  = [params['mat_cost']     * n(P[t]) for t in T_range]
+cost_sub  = [params['sub_cost']     * n(C[t]) for t in T_range]
 
-total_cost = result['cost']
-total_hire_n = sum(H[t] for t in T_range)
-total_fire_n = sum(L[t] for t in T_range)
-max_backlog  = max(S[t] for t in T_range)
-service_rate = 1 - sum(S[t] for t in T_range) / (sum(demand) + 1e-9)
+total_cost   = result['cost']
+total_hire_n = sum(n(H[t]) for t in T_range)
+total_fire_n = sum(n(L[t]) for t in T_range)
+max_backlog  = max(n(S[t]) for t in T_range)
+service_rate = 1 - sum(n(S[t]) for t in T_range) / (sum(demand) + 1e-9)
 
 
 # ── KPI 카드 ─────────────────────────────────────────────────
@@ -598,11 +610,11 @@ with tab1:
             name='수요', marker_color=COLORS['blue'], opacity=0.7
         ))
         fig.add_trace(go.Bar(
-            x=mo, y=[P[t] for t in T_range],
+            x=mo, y=[n(P[t]) for t in T_range],
             name='생산량', marker_color=COLORS['green'], opacity=0.85
         ))
         fig.add_trace(go.Bar(
-            x=mo, y=[C[t] for t in T_range],
+            x=mo, y=[n(C[t]) for t in T_range],
             name='하청', marker_color=COLORS['orange'], opacity=0.85
         ))
         fig.add_trace(go.Scatter(
@@ -635,10 +647,10 @@ with tab1:
 
     # 초과근무
     st.markdown('<div class="section-header">초과근무 시간</div>', unsafe_allow_html=True)
-    max_ot_list = [params['max_ot'] * W[t] for t in T_range]
+    max_ot_list = [params['max_ot'] * n(W[t]) for t in T_range]
     fig3 = go.Figure()
     fig3.add_trace(go.Bar(
-        x=mo, y=[O[t] for t in T_range],
+        x=mo, y=[n(O[t]) for t in T_range],
         name='실제 초과근무', marker_color=COLORS['yellow'], opacity=0.85
     ))
     fig3.add_trace(go.Scatter(
@@ -660,17 +672,17 @@ with tab2:
                     unsafe_allow_html=True)
         fig = make_subplots(specs=[[{"secondary_y": True}]])
         fig.add_trace(go.Scatter(
-            x=mo, y=[W[t] for t in T_range],
+            x=mo, y=[n(W[t]) for t in T_range],
             name='종업원 수', mode='lines+markers',
             line=dict(color=COLORS['blue'], width=3),
             marker=dict(size=8, symbol='circle', color=COLORS['blue'])
         ), secondary_y=False)
         fig.add_trace(go.Bar(
-            x=mo, y=[H[t] for t in T_range],
+            x=mo, y=[n(H[t]) for t in T_range],
             name='신규 고용', marker_color=COLORS['green'], opacity=0.7
         ), secondary_y=True)
         fig.add_trace(go.Bar(
-            x=mo, y=[-L[t] for t in T_range],
+            x=mo, y=[-n(L[t]) for t in T_range],
             name='해고', marker_color=COLORS['red'], opacity=0.7
         ), secondary_y=True)
         fig.update_layout(**CHART_LAYOUT, height=320, barmode='overlay')
@@ -682,7 +694,7 @@ with tab2:
     with c2:
         st.markdown('<div class="section-header">인력 변동 분석</div>',
                     unsafe_allow_html=True)
-        net_change = [H[t] - L[t] for t in T_range]
+        net_change = [n(H[t]) - n(L[t]) for t in T_range]
         colors_bar = [COLORS['green'] if v >= 0 else COLORS['red'] for v in net_change]
         fig2 = go.Figure(go.Bar(
             x=mo, y=net_change,
@@ -698,7 +710,7 @@ with tab2:
     prod_per_w = params['work_days'] * params['work_hours'] / params['std_time']
     max_cap = [prod_per_w * W[t] + params['max_ot'] * W[t] / params['std_time']
                for t in T_range]
-    reg_cap = [prod_per_w * W[t] for t in T_range]
+    reg_cap = [prod_per_w * n(W[t]) for t in T_range]
     util_reg = [P[t] / reg_cap[i] * 100 if reg_cap[i] > 0 else 0
                 for i, t in enumerate(T_range)]
 
@@ -872,14 +884,14 @@ with tab5:
         rows3 += f"""<tr>
           <td>{mo[i]}</td>
           <td>{demand[i]:,.0f}</td>
-          <td>{W[t]:.1f}</td>
-          <td class="highlight">{H[t]:.1f}</td>
-          <td class="alert">{L[t]:.1f}</td>
-          <td>{P[t]:,.1f}</td>
-          <td>{C[t]:,.1f}</td>
-          <td>{O[t]:,.1f}</td>
-          <td>{I[t]:,.1f}</td>
-          <td{s_class}>{S[t]:,.1f}</td>
+          <td>{n(W[t]):.1f}</td>
+          <td class="highlight">{n(H[t]):.1f}</td>
+          <td class="alert">{n(L[t]):.1f}</td>
+          <td>{n(P[t]):,.1f}</td>
+          <td>{n(C[t]):,.1f}</td>
+          <td>{n(O[t]):,.1f}</td>
+          <td>{n(I[t]):,.1f}</td>
+          <td{s_class}>{n(S[t]):,.1f}</td>
         </tr>"""
 
     st.markdown(f"""
@@ -893,12 +905,12 @@ with tab5:
     df_export = pd.DataFrame({
         '월': mo,
         '수요': [demand[i] for i in range(TH)],
-        '종업원수': [W[t] for t in T_range],
-        '고용': [H[t] for t in T_range],
-        '해고': [L[t] for t in T_range],
-        '생산량': [P[t] for t in T_range],
-        '하청': [C[t] for t in T_range],
-        '잔업시간': [O[t] for t in T_range],
+        '종업원수': [n(W[t]) for t in T_range],
+        '고용': [n(H[t]) for t in T_range],
+        '해고': [n(L[t]) for t in T_range],
+        '생산량': [n(P[t]) for t in T_range],
+        '하청': [n(C[t]) for t in T_range],
+        '잔업시간': [n(O[t]) for t in T_range],
         '재고': [I[t] for t in T_range],
         '부재고': [S[t] for t in T_range],
         '총비용': [sum([cost_reg[i], cost_ot[i], cost_hire[i], cost_fire[i],
